@@ -2,31 +2,84 @@ package evm
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
-	ethcmn "github.com/ethereum/go-ethereum/common"
-	ethvm "github.com/ethereum/go-ethereum/core/vm"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	types "github.com/cosmos/ethermint/x/evm/types"
+	evmtypes "github.com/cosmos/ethermint/x/evm/types"
+	ethcmn "github.com/ethereum/go-ethereum/common"
+	ethcore "github.com/ethereum/go-ethereum/core"
 	ethstate "github.com/ethereum/go-ethereum/core/state"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	ethvm "github.com/ethereum/go-ethereum/core/vm"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	ethparams "github.com/ethereum/go-ethereum/params"
 
 	"math/big"
 )
 
+var zeroAddress = &ethcmn.Address{0x0}
+
 // Keeper wraps the CommitStateDB, allowing us to pass in SDK context while adhering
 // to the StateDB interface
 type Keeper struct {
-	csdb *types.CommitStateDB
+	csdb *evmtypes.CommitStateDB
 	cdc  *codec.Codec
 }
 
 func NewKeeper(ak auth.AccountKeeper, storageKey, codeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		csdb: types.NewCommitStateDB(sdk.Context{}, ak, storageKey, codeKey),
+		csdb: evmtypes.NewCommitStateDB(sdk.Context{}, ak, storageKey, codeKey),
 		cdc:  cdc,
 	}
 }
+
+// TODO: We don't really need to expose all these functions, we should probably change it
+// so that only non-state changing methods are exported.
+
+func (k *Keeper) applyTransaction(config *ethparams.ChainConfig, bc ethcore.ChainContext,
+	author *ethcmn.Address, gp *ethcore.GasPool, statedb *evmtypes.CommitStateDB,
+	header *ethtypes.Header, tx *ethtypes.Transaction, usedGas *uint64, cfg ethvm.Config) (*ethtypes.Receipt, uint64, error) {
+	msg, err := tx.AsMessage(ethtypes.MakeSigner(config, header.Number))
+	if err != nil {
+		return nil, 0, err
+	}
+	// Create a new context to be used in the EVM environment
+	context := ethcore.NewEVMContext(msg, header, bc, author)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := ethvm.NewEVM(context, statedb, config, cfg)
+	// Apply the transaction to the current state (included in the env)
+	_, gas, failed, err := ethcore.ApplyMessage(vmenv, msg, gp)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Update the state with pending changes
+	var root []byte
+	if config.IsByzantium(header.Number) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	}
+	*usedGas += gas
+
+	// Create a new receipt for the transaction, storing the intermediate root and gas used by the tx
+	// based on the eip phase, we're passing whether the root touch-delete accounts.
+	receipt := ethtypes.NewReceipt(root, failed, *usedGas)
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = gas
+	// if the transaction created a contract, store the creation address in the receipt.
+	if msg.To() == nil {
+		receipt.ContractAddress = ethcrypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
+	}
+	// Set the receipt logs and create a bloom for filtering
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = ethtypes.CreateBloom(ethtypes.Receipts{receipt})
+	receipt.BlockHash = statedb.BlockHash()
+	receipt.BlockNumber = header.Number
+	receipt.TransactionIndex = uint(statedb.TxIndex())
+
+	return receipt, gas, err
+}
+
 
 // ----------------------------------------------------------------------------
 // Genesis
@@ -264,6 +317,6 @@ func (k *Keeper) ForEachStorage(ctx sdk.Context, addr ethcmn.Address, cb func(ke
 }
 
 // Calls CommitStateDB.GetOrNetStateObject using the passed in context
-func (k *Keeper) GetOrNewStateObject(ctx sdk.Context, addr ethcmn.Address) types.StateObject {
+func (k *Keeper) GetOrNewStateObject(ctx sdk.Context, addr ethcmn.Address) evmtypes.StateObject {
 	return k.csdb.WithContext(ctx).GetOrNewStateObject(addr)
 }
