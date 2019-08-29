@@ -38,7 +38,17 @@ func (e *PublicEthAPI) Syncing() interface{} {
 
 // Coinbase returns this node's coinbase address. Not used in Ethermint.
 func (e *PublicEthAPI) Coinbase() (addr common.Address) {
-	return
+	node, err := e.cliCtx.GetNode()
+	if err != nil {
+		fmt.Println("")
+	}
+
+	status, err := node.Status()
+	if err != nil {
+		fmt.Println("")
+	}
+
+	return common.BytesToAddress(status.ValidatorInfo.Address.Bytes())
 }
 
 // Mining returns whether or not this node is currently mining. Always false.
