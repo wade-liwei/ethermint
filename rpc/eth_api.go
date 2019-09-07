@@ -9,9 +9,15 @@ import (
 	"github.com/cosmos/ethermint/x/evm/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/eth"
+	ethapi "github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/signer/core"
+	"github.com/tendermint/tendermint/crypto/merkle"
+	"github.com/tendermint/tendermint/rpc/client"
 )
+
+var _ PublicEthAPI = &eth.PublicEthereumAPI{}
 
 // PublicEthAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.
 type PublicEthAPI struct {
@@ -251,4 +257,49 @@ func (e *PublicEthAPI) GetUncleByBlockHashAndIndex(hash common.Hash, idx hexutil
 // GetUncleByBlockNumberAndIndex returns the uncle identified by number and index. Always returns nil.
 func (e *PublicEthAPI) GetUncleByBlockNumberAndIndex(number hexutil.Uint, idx hexutil.Uint) map[string]interface{} {
 	return nil
+}
+
+func (e *PublicEthAPI) GetProof(address common.Address, storageKeys [32]byte, block rpc.BlockNumber) (map[string]interface{}, error) {
+	// Get node for proof queries
+	node, err := e.cliCtx.GetNode()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get context for value queries
+	ctx := e.cliCtx.WithHeight(block.Int64())
+
+
+	storageProofs := make([]ethapi.StorageResult, len(storageKeys))
+
+
+	//TODO: Get account proof
+
+	var pPath string
+	var proof *merkle.Proof
+
+	opts := client.ABCIQueryOptions{Height: int64(block), Prove: true}
+
+	for i, k := range storageKeys {
+		// Fetch proof
+		pPath = fmt.Sprintf("/custom/%s/code/%s/%x", types.EvmStoreKey, address, k)
+		pRes, err := node.ABCIQueryWithOptions(pPath, nil, opts)
+		if err != nil {
+			return nil, err
+		}
+		proof = pRes.Response.GetProof()
+
+		// Get value for key
+		vPath := fmt.Sprintf("custom/%s/storage/%s/%x", types.ModuleName, address, k)
+		vRes, _, err := ctx.Query(vPath)
+		value := new(types.QueryResStorage)
+		e.cliCtx.Codec.MustUnmarshalJSON(vRes, &value)
+
+		storageProofs[i] = ethapi.StorageResult{
+			Key:   k,
+			Value: value.Value,
+			Proof: proof.,
+		}
+	}
+
 }
