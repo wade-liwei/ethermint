@@ -59,6 +59,7 @@ func (msg EmintMsg) GetSignBytes() []byte {
 
 // ValidateBasic runs stateless checks on the message
 func (msg EmintMsg) ValidateBasic() sdk.Error {
+	fmt.Println("ValidateBasic")
 	if msg.Price.Sign() != 1 {
 		return types.ErrInvalidValue(fmt.Sprintf("Price must be positive: %x", msg.Price))
 	}

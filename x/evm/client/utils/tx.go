@@ -33,6 +33,7 @@ import (
 // to STDOUT in a fully offline manner. Otherwise, the tx will be signed and
 // broadcasted.
 func GenerateOrBroadcastETHMsgs(cliCtx context.CLIContext, txBldr authtypes.TxBuilder, msgs []sdk.Msg) error {
+	fmt.Println("GenerateOrBroadcastETHMsgs")
 	if cliCtx.GenerateOnly {
 		return utils.PrintUnsignedStdTx(txBldr, cliCtx, msgs)
 	}
@@ -80,6 +81,7 @@ func BroadcastETHTx(cliCtx context.CLIContext, txBldr authtypes.TxBuilder, tx *e
 // supplied messages. Finally, it broadcasts the signed transaction to a node.
 // * Modified version from github.com/cosmos/cosmos-sdk/x/auth/client/utils/tx.go
 func completeAndBroadcastETHTxCLI(txBldr authtypes.TxBuilder, cliCtx context.CLIContext, msgs []sdk.Msg) error {
+	fmt.Printf("\n completeAndBroadcastETHTxCLI %+v \n", txBldr)
 	txBldr, err := utils.PrepareTxBuilder(txBldr, cliCtx)
 	if err != nil {
 		return err
