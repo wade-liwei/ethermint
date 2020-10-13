@@ -56,13 +56,13 @@ Check the JSON-RPC methods and namespaces supported on Ethermint. {synopsis}
 | `eth_compileSolidity`                                                             | Eth       |             |                           |
 | `eth_compileSerpent`                                                              | Eth       |             |                           |
 | `eth_signTransaction`                                                             | Eth       |             |                           |
-| `eth_mining`                                                                      | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_coinbase`                                                                    | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_hashrate`                                                                    | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_getUncleCountByBlockHash`                                                    | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_getUncleCountByBlockNumber`                                                  | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_getUncleByBlockHashAndIndex`                                                 | Eth       | N/A         | Not relevant to HalleChain |
-| `eth_getUncleByBlockNumberAndIndex`                                               | Eth       | N/A         | Not relevant to HalleChain |
+| `eth_mining`                                                                      | Eth       | N/A         | Not relevant to ethermint |
+| `eth_coinbase`                                                                    | Eth       | N/A         | Not relevant to ethermint |
+| `eth_hashrate`                                                                    | Eth       | N/A         | Not relevant to ethermint |
+| `eth_getUncleCountByBlockHash`                                                    | Eth       | N/A         | Not relevant to ethermint |
+| `eth_getUncleCountByBlockNumber`                                                  | Eth       | N/A         | Not relevant to ethermint |
+| `eth_getUncleByBlockHashAndIndex`                                                 | Eth       | N/A         | Not relevant to ethermint |
+| `eth_getUncleByBlockNumberAndIndex`                                               | Eth       | N/A         | Not relevant to ethermint |
 | [`eth_subscribe`](#eth-subscribe)                                                 | Websocket | ✔           |                           |
 | [`eth_unsubscribe`](#eth-unsubscribe)                                             | Websocket | ✔           |                           |
 | [`personal_importRawKey`](#personal-importrawkey)                                 | Personal  | ✔           |                           |
